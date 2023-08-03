@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "system.h"
 #include "servo.h"
+#include "track.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,6 +110,8 @@ int main(void)
   {
 		Servo_0.Current_PWM = Get_PWM_From_Response(Servo_0.Response_UART_Rx.Response);
     Servo_1.Current_PWM = Get_PWM_From_Response(Servo_1.Response_UART_Rx.Response);
+    X_Bias = Get_X_Bias_From_Rx();
+    Y_Bias = Get_Y_Bias_From_Rx();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -224,6 +227,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
 
 
+	
+	
+	
 	else if (huart == &huart3)
 	{
     if (Servo_Control_State == SERVO_0_GET || Servo_Control_State == SERVO_0_SET)
