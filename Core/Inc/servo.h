@@ -5,14 +5,14 @@
 #include "usart.h"
 
 #define SERVO_0_PWM_INIT      1500
-#define SERVO_1_PWM_INIT      1500
+#define SERVO_1_PWM_INIT      2166
 
 
 #define SERVO_0_PWM_MIN       834
 #define SERVO_0_PWM_MAX       2166
 
 #define SERVO_1_PWM_MIN       1500
-#define SERVO_1_PWM_MAX       2166
+#define SERVO_1_PWM_MAX       2250
 
 #define SERVO_COMMAND_HEADER      '#'
 #define SERVO_COMMAND_TAIL        '!'
@@ -58,8 +58,8 @@ void Servo_Init(void);
 
 void Servo_Set_Control_Mode(uint8_t Mode);
 
-void Servo_Set_PWM(Servo servo, uint16_t PWM);
-void Servo_Set_Angle(Servo servo, float Angle);
+void Servo_Set_PWM(Servo servo, uint16_t PWM, uint16_t time);
+void Servo_Set_Angle(Servo servo, float Angle, uint16_t time);
 
 void Servo_Get_Position(Servo servo);
 
@@ -67,6 +67,5 @@ void Servo_Stop(Servo servo);
 
 uint16_t Get_PWM_From_Response(uint8_t *Response);
 
-void Servo_Rx_Byte(Servo servo);
 
 #endif

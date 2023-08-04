@@ -28,6 +28,7 @@
 #include "system.h"
 #include "servo.h"
 #include "track.h"
+#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -97,8 +98,9 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	Servo_Init();
-	sprintf((char*)cmd, "#001PSCK!");
-  HAL_UART_Transmit_DMA(&SERVO_UART_HANDLER, cmd, 15);
+	HAL_Delay(1000);
+		
+	Track_Init();
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_UART_Receive_DMA(&huart3, Servo_0.Response_UART_Rx.Response_Temp, 1);
   HAL_UART_Receive_DMA(&huart2, Track_Rx_Data_Temp, 1);
@@ -112,6 +114,15 @@ int main(void)
     Servo_1.Current_PWM = Get_PWM_From_Response(Servo_1.Response_UART_Rx.Response);
     X_Bias = Get_X_Bias_From_Rx();
     Y_Bias = Get_Y_Bias_From_Rx();
+
+    Track_PID_Update(&X_PID, X_Bias, &X_PID_Output);
+    Track_PID_Update(&Y_PID, -Y_Bias, &Y_PID_Output);
+
+    Servo_0.Target_PWM = target_limit_int(Servo_0.Current_PWM + X_PID_Output, Servo_0.PWM_Min, Servo_0.PWM_Max);
+    Servo_0.Target_Angle = (Servo_0.Target_PWM - 500) * (Servo_0.Angle_Max - Servo_0.Angle_Min) / (Servo_0.PWM_Max - Servo_0.PWM_Min) - 135;
+    Servo_1.Target_PWM = target_limit_int(Servo_1.Current_PWM + Y_PID_Output, Servo_1.PWM_Min, Servo_1.PWM_Max);
+    Servo_1.Target_Angle = (Servo_1.Target_PWM - 500) * (Servo_1.Angle_Max - Servo_1.Angle_Min) / (Servo_1.PWM_Max - Servo_1.PWM_Min) - 135;
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -172,11 +183,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  // 10ms
     case SERVO_0_SET:
       if (Servo_Control_Mode == SERVO_CONTROL_BY_PWM)
       {
-        Servo_Set_PWM(Servo_0, Servo_0.Target_PWM);
+        Servo_Set_PWM(Servo_0, Servo_0.Target_PWM, 2500);
       }
       else if (Servo_Control_Mode == SERVO_CONTROL_BY_ANGLE)
       {
-        Servo_Set_Angle(Servo_0, Servo_0.Target_Angle);
+        Servo_Set_Angle(Servo_0, Servo_0.Target_Angle, 2500);
       }
       Servo_Control_State = SERVO_1_GET;
       break;
@@ -188,11 +199,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  // 10ms
     case SERVO_1_SET:
       if (Servo_Control_Mode == SERVO_CONTROL_BY_PWM)
       {
-      Servo_Set_PWM(Servo_1, Servo_1.Target_PWM);
+      Servo_Set_PWM(Servo_1, Servo_1.Target_PWM, 2500);
       }
       else if (Servo_Control_Mode == SERVO_CONTROL_BY_ANGLE)
       {
-      Servo_Set_Angle(Servo_1, Servo_1.Target_Angle);
+      Servo_Set_Angle(Servo_1, Servo_1.Target_Angle, 2500);
       }
       Servo_Control_State = SERVO_0_GET;
       break;
@@ -215,7 +226,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
     else if (Track_Rx_Start_Flag == 1)
     {
-      memcpy(Track_Rx_Data, Track_Rx_Data_Temp, 6);
+			if (Track_Rx_Data_Temp[5] == 0x55)
+			{
+				memcpy(Track_Rx_Data, Track_Rx_Data_Temp, 6);
+			}
       Track_Rx_Start_Flag = 0;
       HAL_UART_Receive_DMA(&huart2, Track_Rx_Data_Temp, 1);
     }
@@ -225,11 +239,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       HAL_UART_Receive_DMA(&huart2, Track_Rx_Data_Temp, 1);
     }
   }
-
-
-	
-	
-	
 	else if (huart == &huart3)
 	{
     if (Servo_Control_State == SERVO_0_GET || Servo_Control_State == SERVO_0_SET)

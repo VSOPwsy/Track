@@ -27,6 +27,10 @@ typedef union {
     uint8_t as_bytes[2];
 } uint16_union;
 
+typedef union {
+    uint16_t as_int16;
+    uint8_t as_bytes[2];
+} int16_union;
 
 float target_limit_float(float, float, float);
 int target_limit_int(int, int, int);

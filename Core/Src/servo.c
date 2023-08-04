@@ -29,6 +29,12 @@ void Servo_Init(void)
     Servo_1.Target_Angle = (Servo_1.Target_PWM-1500)*(Servo_1.Angle_Max-Servo_1.Angle_Min)/(Servo_1.PWM_Max -Servo_1.PWM_Min);
     Servo_1.Current_Angle = Servo_1.Target_Angle;
     Servo_1.Current_PWM = Servo_1.Target_PWM;
+		
+		Servo_Set_PWM(Servo_0, 1500, 500);
+		HAL_Delay(10);
+		Servo_Set_PWM(Servo_1, 2166, 500);
+		HAL_Delay(2000);
+		
 }
 
 void Servo_Set_Control_Mode(uint8_t Mode)
@@ -43,18 +49,18 @@ void Servo_Set_Control_Mode(uint8_t Mode)
     }
 }
 
-void Servo_Set_PWM(Servo servo, uint16_t PWM)
+void Servo_Set_PWM(Servo servo, uint16_t PWM, uint16_t time)
 {
-    sprintf((char*)cmd, "#%03dP%04dT0500!", servo.ID, PWM < servo.PWM_Min ? servo.PWM_Min : (PWM > servo.PWM_Max ? servo.PWM_Max : PWM));
+    sprintf((char*)cmd, "#%03dP%04dT%04d!", servo.ID, PWM < servo.PWM_Min ? servo.PWM_Min : (PWM > servo.PWM_Max ? servo.PWM_Max : PWM), time);
     HAL_UART_Transmit_DMA(&SERVO_UART_HANDLER, cmd, 15);
     
 }
 
-void Servo_Set_Angle(Servo servo, float Angle)
+void Servo_Set_Angle(Servo servo, float Angle, uint16_t time)
 {
     float agl = Angle < servo.Angle_Min ? servo.Angle_Min : (Angle > servo.Angle_Max ? servo.Angle_Max : Angle);
     uint16_t PWM = (agl+135)*(servo.PWM_Max - servo.PWM_Min)/(servo.Angle_Max - servo.Angle_Min) + 500;
-    Servo_Set_PWM(servo, PWM);
+    Servo_Set_PWM(servo, PWM, time);
 }
 
 void Servo_Get_Position(Servo servo)
@@ -78,125 +84,4 @@ uint16_t Get_PWM_From_Response(uint8_t *Response)
     uint16_t pwm = atoi(number);
 
     return pwm;
-}
-
-void Servo_Rx_Byte(Servo servo)
-{
-    switch (servo.Response_UART_Rx.Index)
-    {
-    case 0:
-        if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index++;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        break;
-
-    case 1:
-        if (Servo_UART_Rx_Byte == '0')
-        {
-            servo.Response_UART_Rx.Index++;
-            servo.Response_UART_Rx.Response_Temp[1] = Servo_UART_Rx_Byte;
-        }
-        else if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index = 1;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        else
-        {
-            servo.Response_UART_Rx.Index = 0;
-        }
-        break;
-
-    case 2:
-        if (Servo_UART_Rx_Byte == '0')
-        {
-            servo.Response_UART_Rx.Index++;
-            servo.Response_UART_Rx.Response_Temp[2] = Servo_UART_Rx_Byte;
-        }
-        else if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index = 1;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        else
-        {
-            servo.Response_UART_Rx.Index = 0;
-        }
-        break;
-
-    case 3:
-        if (Servo_UART_Rx_Byte == '0' + servo.ID)
-        {
-            servo.Response_UART_Rx.Index++;
-            servo.Response_UART_Rx.Response_Temp[3] = Servo_UART_Rx_Byte;
-        }
-        else if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index = 1;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        else
-        {
-            servo.Response_UART_Rx.Index = 0;
-        }
-        break;
-
-    case 4:
-        if (Servo_UART_Rx_Byte == 'P')
-        {
-            servo.Response_UART_Rx.Index++;
-            servo.Response_UART_Rx.Response_Temp[4] = Servo_UART_Rx_Byte;
-        }
-        else if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index = 1;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        else
-        {
-            servo.Response_UART_Rx.Index = 0;
-        }
-        break;
-
-    case 5:
-        servo.Response_UART_Rx.Response_Temp[5] = Servo_UART_Rx_Byte;
-        servo.Response_UART_Rx.Index++;
-
-    case 6:
-        servo.Response_UART_Rx.Response_Temp[6] = Servo_UART_Rx_Byte;
-        servo.Response_UART_Rx.Index++;
-
-    case 7:
-        servo.Response_UART_Rx.Response_Temp[7] = Servo_UART_Rx_Byte;
-        servo.Response_UART_Rx.Index++;
-
-    case 8:
-        servo.Response_UART_Rx.Response_Temp[8] = Servo_UART_Rx_Byte;
-        servo.Response_UART_Rx.Index++;
-
-    case 9:
-        if (Servo_UART_Rx_Byte == '!')
-        {
-            servo.Response_UART_Rx.Response_Temp[9] = Servo_UART_Rx_Byte;
-            servo.Response_UART_Rx.Index = 0;
-            memcpy(servo.Response_UART_Rx.Response, servo.Response_UART_Rx.Response_Temp, 10);
-        }
-        else if (Servo_UART_Rx_Byte == '#')
-        {
-            servo.Response_UART_Rx.Index = 1;
-            servo.Response_UART_Rx.Response_Temp[0] = Servo_UART_Rx_Byte;
-        }
-        else
-        {
-            servo.Response_UART_Rx.Index = 0;
-        }
-
-            
-    
-    default:
-        servo.Response_UART_Rx.Index = 0;
-        break;
-    }
 }
